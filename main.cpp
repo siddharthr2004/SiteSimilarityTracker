@@ -17,24 +17,44 @@ using namespace std;
 
 class runConcurrently {
     public:
+   
+    runConcurrently(std::vector<std::string>& URLs) : shutdown(false) {
+        ssize_t amountCPUs = std::max(1u, std::thread::hardware_concurrency()-1);
+        for (int i=0; i<amountCPUs; ++i) {
+            threadPool.emplace_back([this]() -> void {
+                while(true) {
+                    std::function<void()> task;
+                    std::unique_lock<std::mutex>lock(taskLock); {
+                        cv.wait(lock, [this]() { 
+                            return !taskQueue.empty() || shutdown; 7645
+                        });
+                        if (shutdown && taskQueue.empty()) {
+                            return;
+                        }
+                        task = std::move(taskQueue.front());
+                        taskQueue.pop();
+                    }
+                    task();
+                }
+            });
+        }
+        for (std::string& URL : URLs) {
+            std::unique_ptr<findSiteInfo> toAdd = std::make_unique<findSiteInfo>(URL);
+            taskQueue.push([s = std::move(toAdd)] () {
+                s->getInfo();
+            });
+        }
+        cv.notify_all();
+    }
+
+    private:
     std::vector<std::thread>threadPool;
     std::queue<std::function<void()>>taskQueue;
     std::vector<param> matrix;
     std::mutex taskLock;
     std::mutex writeLock;
     std::condition_variable cv;
-
-    runConcurrently(std::vector<std::string> URLs) {
-        for (std::string URL : URLs) {
-            std::unique_ptr<findSiteInfo> toAdd = std::make_unique<findSiteInfo>(URL);
-            taskQueue.push([toAdd = std::move(toAdd)]() -> void {
-                toAdd->getInfo();
-            });
-        }
-    }
-    void runPrograms(void) {
-        ssize_t amountCPUs = std::max(1u, std::thread::hardware_concurrency()-1);
-    }
+    bool shutdown; 
 
 };
 class findSiteInfo {

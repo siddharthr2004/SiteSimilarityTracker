@@ -23,10 +23,11 @@ class runConcurrently {
         for (int i=0; i<amountCPUs; ++i) {
             threadPool.emplace_back([this]() -> void {
                 while(true) {
-                    std::function<void()> task;
-                    std::unique_lock<std::mutex>lock(taskLock); {
+                    std::function<std::unique_ptr<param>()> task;
+                    {
+                    std::unique_lock<std::mutex>lock(taskLock); 
                         cv.wait(lock, [this]() { 
-                            return !taskQueue.empty() || shutdown; 7645
+                            return !taskQueue.empty() || shutdown; 
                         });
                         if (shutdown && taskQueue.empty()) {
                             return;
@@ -34,14 +35,18 @@ class runConcurrently {
                         task = std::move(taskQueue.front());
                         taskQueue.pop();
                     }
-                    task();
+                    std::unique_ptr<param> val = task();
+                    {
+                        std::unique_lock<std::mutex>lock(writeLock);
+                        matrix.emplace_back(std::move(val));
+                    }
                 }
             });
         }
         for (std::string& URL : URLs) {
             std::unique_ptr<findSiteInfo> toAdd = std::make_unique<findSiteInfo>(URL);
-            taskQueue.push([s = std::move(toAdd)] () {
-                s->getInfo();
+            taskQueue.push([s = std::move(toAdd)] () -> std::unique_ptr<param> {
+                return std::make_unique<param>(s->getInfo());
             });
         }
         cv.notify_all();
@@ -49,8 +54,8 @@ class runConcurrently {
 
     private:
     std::vector<std::thread>threadPool;
-    std::queue<std::function<void()>>taskQueue;
-    std::vector<param> matrix;
+    std::queue<std::function<std::unique_ptr<param>()>>taskQueue;
+    std::vector<std::unique_ptr<param>> matrix;
     std::mutex taskLock;
     std::mutex writeLock;
     std::condition_variable cv;
@@ -63,7 +68,7 @@ class findSiteInfo {
 
     findSiteInfo(std::string& inputURL) : URL(inputURL) {}
 
-    void getInfo(void) {
+    std::unique_ptr<param> getInfo(void) {
         CURLU *h = curl_url();
         CURLUcode rh = curl_url_set(h, CURLUPART_URL, URL.c_str(), 0);
             if (rh != CURLUE_OK) {
@@ -71,6 +76,8 @@ class findSiteInfo {
             }
             std::unique_ptr<param> foundVals = std::make_unique<param>();
         }
+        //placeholder
+        
     };
 
 int main(int argc, char* argv[]) {

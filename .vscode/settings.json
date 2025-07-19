@@ -67,11 +67,12 @@
         "unordered_map": "cpp",
         "utility": "cpp",
         "vector": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "condition_variable": "cpp"
     }, 
      "C_Cpp.default.includePath": [
       "${default}",
-      "/opt/homebrew/opt/openssl@3/include",  
+      "/opt/homebrew/opt/openssl/include",  
       "/usr/local/include",              
   ],
     "C_Cpp.default.compilerPath": "/usr/bin/clang"  

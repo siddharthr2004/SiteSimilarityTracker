@@ -80,62 +80,75 @@ class findSiteInfo {
 
 class runConcurrently {
     public:
-    runConcurrently(std::vector<std::string> URLs) : shutdown(false) {
+    runConcurrently(std::vector<std::string> URLs) : shutdownFlag(false) {
         ssize_t amountCPUs = std::max(1u, std::thread::hardware_concurrency()-1);
         //Current thread:
         std::cout<<"This is the main thread ID: "<<std::this_thread::get_id()<<std::endl;
         for (int i=0; i<amountCPUs; ++i) {
-            threadPool.emplace_back([this]() -> void {
-                while(true) {
-                    std::function<std::unique_ptr<param>()> task; {
-                    std::ostringstream oss;
+            threadPool.emplace_back([this]() {
+                try {
+                    std::cout << "Thread " << std::this_thread::get_id() << " has been spawned and will sleep now" << std::endl;
+                    
+                    while (true) {
+                        std::function<std::unique_ptr<param>()> task; {
+                        std::ostringstream oss;
 
-                    std::unique_lock<std::mutex>lock(taskLock);
-                    std::cout<<"thread "<<std::this_thread::get_id()<<" has been spawned and will sleep now"<<std::endl;
-                    cv.wait(lock, [this]() { 
-                        return !taskQueue.empty() || shutdown; 
-                    });
-                    //Printing out first "locked" piece
-                    oss <<"thread "<<std::this_thread::get_id()<<"Has entered the locked segment";
-                    std::string toAddOne = oss.str(); 
-                    std::cout<<toAddOne<<std::endl;
-                    if (shutdown && taskQueue.empty()) {
-                        return;
+                        std::unique_lock<std::mutex>lock(taskLock);
+                        std::cout<<"thread "<<std::this_thread::get_id()<<" has been spawned and will sleep now"<<std::endl;
+                        cv.wait(lock, [this]() { 
+                            return !taskQueue.empty() || shutdownFlag; 
+                        });
+                        //Printing out first "locked" piece
+                        oss <<"thread "<<std::this_thread::get_id()<<"Has entered the locked segment";
+                        std::string toAddOne = oss.str(); 
+                        std::cout<<toAddOne<<std::endl;
+                        if (shutdownFlag && taskQueue.empty()) {
+                            return;
+                        }
+                        oss.clear();
+                        //printing out second "locked" piece
+                        oss <<"Taking task out in thread: "<<std::this_thread::get_id;
+                        std::string toAddTwo = oss.str();
+                        std::cout<<toAddTwo<<std::endl;
+                                    
+                        if (taskQueue.empty() == false) {
+                            task = std::move(taskQueue.front());
+                            taskQueue.pop();
+                        } else {
+                            std::cout<<"Empty taskQueue"<<std::endl;
+                        }
+                                    
+                        oss.clear();
+                        //Printing out third "locked" piece
+                        oss <<"unlocking thread: "<<std::this_thread::get_id();
+                        std::string toAddThree = oss.str();
+                        std::cout<<toAddThree<<std::endl;
+                        }
+                        // Outside the lock scope, execute task
+                        std::unique_ptr<param> val;
+                        if (task) {
+                            try {
+                                std::cout << "Running task from thread" << std::this_thread::get_id() << "now..." << std::endl;
+                                val = task();
+                                std::cout << "Task completed in " << std::this_thread::get_id() << std::endl;
+                            } catch (const std::exception& e) {
+                                std::cerr << "Exception in task execution: " << e.what() << std::endl;
+                            } catch (...) {
+                                std::cerr << "Unknown exception in task execution" << std::endl;
+                            }
+                        } else {
+                            std::cerr << "WARNING: Null task detected in worker thread!" << std::endl;
+                        }
+                        {
+                        std::unique_lock<std::mutex>writeGuard(writeLock); 
+                        std::cout<<std::this_thread::get_id()<<" is now writing to matrix now"<<std::endl;
+                        matrix.emplace_back(std::move(val));
+                        }
                     }
-                    oss.clear();
-                    //printing out second "locked" piece
-                    oss <<"Taking task out in thread: "<<std::this_thread::get_id;
-                    std::string toAddTwo = oss.str();
-                    std::cout<<toAddTwo<<std::endl;
-                                
-                    if (taskQueue.empty() == false) {
-                        task = std::move(taskQueue.front());
-                        taskQueue.pop();
-                    } else {
-                        std::cout<<"Empty taskQueue"<<std::endl;
-                    }
-                                
-                    oss.clear();
-                    //Printing out third "locked" piece
-                    oss <<"unlocking thread: "<<std::this_thread::get_id();
-                    std::string toAddThree = oss.str();
-                    std::cout<<toAddThree<<std::endl;
-                    }
-                    if (!task) {
-                        std::cerr << "WARNING: Null task detected in worker thread!" << std::endl;
-                        continue;
-                    }
-                    std::cout<<"Running task from thread"<<std::this_thread::get_id()<<"now..."<<std::endl;
-                    std::unique_ptr<param>val;
-                    //testing with a try-catch block
-                    val = task();
-                                   
-                    std::cout<<"Task completed in "<<std::this_thread::get_id()<<std::endl;
-                    {
-                    std::unique_lock<std::mutex>writeGuard(writeLock); 
-                    std::cout<<std::this_thread::get_id()<<" is now writing to matrix now"<<std::endl;
-                    matrix.emplace_back(std::move(val));
-                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "Exception in worker thread: " << e.what() << std::endl;
+                } catch (...) {
+                    std::cerr << "Unknown exception in worker thread" << std::endl;
                 }
             });
         } 
@@ -143,26 +156,45 @@ class runConcurrently {
         std::cout<<std::this_thread::get_id()<<" threas is now adding processes in"<<std::endl;
         for (std::string& URL : URLs) {
             auto toAdd = std::make_shared<findSiteInfo>(URL);
-            taskQueue.push([s = std::move(toAdd)] () -> std::unique_ptr<param> {
-                try {
-                    std::cout<<std::this_thread::get_id()<<" has added the URL"<<std::endl;
-                    return s->getInfo();
-                } catch (std::exception& e) {
-                    std::cerr<<"Error with exceitpion here: "<<e.what()<<std::endl;
-                } catch (...) {
-                    std::cerr<<"Unknown exception found"<<std::endl;
-                }
-            });
+            {
+                std::unique_lock<std::mutex> lock(taskLock);
+                taskQueue.push([s = std::move(toAdd)] () -> std::unique_ptr<param> {
+                    try {
+                        if (!s) {
+                            std::cerr << "ERROR: Null pointer in lambda" << std::endl;
+                            return nullptr;
+                        }
+                        std::cout << std::this_thread::get_id() << " added the URL" << std::endl;
+                        return s->getInfo();
+                    } catch (const std::exception& e) {
+                        std::cerr << "Exception in lambda: " << e.what() << std::endl;
+                        return nullptr;
+                    } catch (...) {
+                        std::cerr << "Unknown exception in lambda" << std::endl;
+                        return nullptr;
+                    }
+                });
+                cv.notify_one(); // Notify only one waiting thread
+            }
         }
         std::cout<<"WILL START RUNNING THE PROCESSES NOW. This is the size of the taskQueue "<<taskQueue.size()<<std::endl;
         std::cout<<"this the size of the threadPool "<<threadPool.size()<<std::endl;
         cv.notify_all();
         std::cout<<std::this_thread::get_id()<<" thread is now waiting for other values to finish"<<std::endl;
     } 
-    void Completeshutdown(void) {
-        std::unique_lock<std::mutex>finalGate(taskLock);
-        shutdown = true;
+    void shutdown() {
+        {
+            std::unique_lock<std::mutex> lock(taskLock);
+            shutdownFlag = true;
+        }
         cv.notify_all();
+        
+        // Join all threads
+        for (auto& thread : threadPool) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
     }
 
     private:
@@ -172,7 +204,7 @@ class runConcurrently {
     std::mutex taskLock;
     std::mutex writeLock;
     std::condition_variable cv;
-    bool shutdown; 
+    bool shutdownFlag; 
 
 };
 
@@ -200,6 +232,6 @@ int main(int argc, char* argv[]) {
         }
     }
     auto Info = std::make_unique<runConcurrently>(URLs);
-    Info->Completeshutdown();
+    Info->shutdown();
     return 0;
 }

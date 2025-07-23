@@ -14,8 +14,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "param.hpp" 
-using namespace std;
-
+#include <sstream> 
 
 class findSiteInfo {
     public: 
@@ -83,89 +82,83 @@ class runConcurrently {
     public:
     runConcurrently(std::vector<std::string> URLs) : shutdown(false) {
         ssize_t amountCPUs = std::max(1u, std::thread::hardware_concurrency()-1);
+        //Current thread:
+        std::cout<<"This is the main thread ID: "<<std::this_thread::get_id()<<std::endl;
         for (int i=0; i<amountCPUs; ++i) {
-            try {
-                threadPool.emplace_back([this]() -> void {
-                    while(true) {
-                        try {
-                            std::function<std::unique_ptr<param>()> task; {
-                            std::unique_lock<std::mutex>lock(taskLock);
-                            try {
-                                cv.wait(lock, [this]() { 
-                                    return !taskQueue.empty() || shutdown; 
-                                });
-                                std::cout<<"Thread "<<std::this_thread::get_id()<< "has entered the locked segment"<<std::endl;
-                                if (shutdown && taskQueue.empty()) {
-                                    return;
-                                }
-                                std::cout<<"Taking task out in thread: "<<std::this_thread::get_id()<<std::endl;
-                            } catch (const std::exception &e) {
-                                std::cerr<<"error within second inner first part: "<<e.what()<<std::endl;
-                            } catch (...) {
-                                std::cerr<<"Unknwon error within second inner first part"<<std::endl;
-                            }
-                            try {
-                                task = std::move(taskQueue.front());
-                                taskQueue.pop();
-                            } catch (const std::exception& e) {
-                                std::cerr<<"second inner second part error: "<<e.what()<<std::endl;
-                            } catch (...) {
-                                std::cerr<<"unknown second inner second part error"<<std::endl;
-                            }
-                    
-                            std::cout<<"unclocking thread: "<<std::this_thread::get_id()<<std::endl;
-                        }
-                            if (!task) {
-                                std::cerr << "WARNING: Null task detected in worker thread!" << std::endl;
-                                continue;
-                            }
-                            std::cout<<"Running task from thread"<<std::this_thread::get_id()<<"now..."<<std::endl;
-                            //THIS IS JUST FOR TESTING
-                            std::unique_ptr<param>val;
-                            try {
-                                val = task();
-                            } catch (std::exception& e) {
-                                std::cerr<<"Error running task: "<<e.what()<<std::endl;
-                            } catch (...) {
-                                std::cerr<<"Unknown error running task"<<std::endl;
-                            }
-                            std::cout<<"Task completed in "<<std::this_thread::get_id()<<std::endl;
-                            {
-                            std::unique_lock<std::mutex>writeGuard(writeLock); 
-                            std::cout<<std::this_thread::get_id()<<" is now writing to matrix now"<<std::endl;
-                            matrix.emplace_back(std::move(val));
-                            }
-                        }
-                        catch (const std::exception& e) {
-                            std::cerr<<"Exception in inner worker thread "<<e.what()<<std::endl;
-                        }
-                        catch (...) {
-                            std::cerr<<"Unknown exception in worker thread"<<std::endl;
-                        }
+            threadPool.emplace_back([this]() -> void {
+                while(true) {
+                    std::function<std::unique_ptr<param>()> task; {
+                    std::ostringstream oss;
+
+                    std::unique_lock<std::mutex>lock(taskLock);
+                    std::cout<<"thread "<<std::this_thread::get_id()<<" has been spawned and will sleep now"<<std::endl;
+                    cv.wait(lock, [this]() { 
+                        return !taskQueue.empty() || shutdown; 
+                    });
+                    //Printing out first "locked" piece
+                    oss <<"thread "<<std::this_thread::get_id()<<"Has entered the locked segment";
+                    std::string toAddOne = oss.str(); 
+                    std::cout<<toAddOne<<std::endl;
+                    if (shutdown && taskQueue.empty()) {
+                        return;
                     }
-                });
-            } catch (const std::exception& e) {
-                std::cerr<<"Exception in outer thread"<<e.what()<<std::endl;
-            } catch (...) {
-                std::cerr<<"Unknown exception occured"<<std::endl;
-            }
+                    oss.clear();
+                    //printing out second "locked" piece
+                    oss <<"Taking task out in thread: "<<std::this_thread::get_id;
+                    std::string toAddTwo = oss.str();
+                    std::cout<<toAddTwo<<std::endl;
+                                
+                    if (taskQueue.empty() == false) {
+                        task = std::move(taskQueue.front());
+                        taskQueue.pop();
+                    } else {
+                        std::cout<<"Empty taskQueue"<<std::endl;
+                    }
+                                
+                    oss.clear();
+                    //Printing out third "locked" piece
+                    oss <<"unlocking thread: "<<std::this_thread::get_id();
+                    std::string toAddThree = oss.str();
+                    std::cout<<toAddThree<<std::endl;
+                    }
+                    if (!task) {
+                        std::cerr << "WARNING: Null task detected in worker thread!" << std::endl;
+                        continue;
+                    }
+                    std::cout<<"Running task from thread"<<std::this_thread::get_id()<<"now..."<<std::endl;
+                    std::unique_ptr<param>val;
+                    //testing with a try-catch block
+                    val = task();
+                                   
+                    std::cout<<"Task completed in "<<std::this_thread::get_id()<<std::endl;
+                    {
+                    std::unique_lock<std::mutex>writeGuard(writeLock); 
+                    std::cout<<std::this_thread::get_id()<<" is now writing to matrix now"<<std::endl;
+                    matrix.emplace_back(std::move(val));
+                    }
+                }
+            });
         } 
         usleep(5000);
+        std::cout<<std::this_thread::get_id()<<" threas is now adding processes in"<<std::endl;
         for (std::string& URL : URLs) {
             auto toAdd = std::make_shared<findSiteInfo>(URL);
             taskQueue.push([s = std::move(toAdd)] () -> std::unique_ptr<param> {
-                return s->getInfo();
+                try {
+                    std::cout<<std::this_thread::get_id()<<" has added the URL"<<std::endl;
+                    return s->getInfo();
+                } catch (std::exception& e) {
+                    std::cerr<<"Error with exceitpion here: "<<e.what()<<std::endl;
+                } catch (...) {
+                    std::cerr<<"Unknown exception found"<<std::endl;
+                }
             });
         }
-        std::cout<<"WILL START RUNNING THE PROCESSES NOW"<<std::endl;
-        try{
-            cv.notify_all();
-        } catch (const std::exception& e) {
-            std::cerr<<"Error with notifying all vals "<<e.what()<<std::endl;
-        }
-    }
-    
-
+        std::cout<<"WILL START RUNNING THE PROCESSES NOW. This is the size of the taskQueue "<<taskQueue.size()<<std::endl;
+        std::cout<<"this the size of the threadPool "<<threadPool.size()<<std::endl;
+        cv.notify_all();
+        std::cout<<std::this_thread::get_id()<<" thread is now waiting for other values to finish"<<std::endl;
+    } 
     void Completeshutdown(void) {
         std::unique_lock<std::mutex>finalGate(taskLock);
         shutdown = true;

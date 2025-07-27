@@ -23,8 +23,6 @@ class findSiteInfo {
     findSiteInfo(std::string inputURL) : URL(inputURL) {}
 
     std::unique_ptr<param> getInfo(void) {
-        //COMMENTED OUT TO GET CONCURRENCY CORRECT
-        /*
         CURLU *h = curl_url();
         CURLUcode rh = curl_url_set(h, CURLUPART_URL, URL.c_str(), 0);
         if (rh != CURLUE_OK) {
@@ -42,74 +40,61 @@ class findSiteInfo {
         
         if (rh == CURLUE_OK) {
             foundVals->host = (std::string)(curlHost);
-            std::cout<<"CAME HERE 3"<<std::endl;
         } else {
-            fprintf(stderr, "error getting host");
+            foundVals->host = "No explicit host found";
         }
         rh = curl_url_get(h, CURLUPART_PATH, &path, 0);
         if (rh == CURLUE_OK) {
             foundVals->path = (std::string)(path);
         } else {
-            fprintf(stderr, "error getting path");
+            foundVals->path = "No explicit path found";
         }
         
         rh = curl_url_get(h, CURLUPART_PORT, &port, 0);
         if (rh == CURLUE_OK) {
             foundVals->port = (std::string)(port);
         } else {
-            fprintf(stderr, "error getting port");
+            foundVals->port = "No explicit port found";
         }
-            
+        //parameters which are queried/int
         rh = curl_url_get(h, CURLUPART_QUERY, &query, 0);
         if (rh == CURLUE_OK) {
             foundVals->query = (std::string)(query);
         } else {
-            fprintf(stderr, "error getting query");
+            foundVals->query = "No explicit query found";
         }
+        //Http vs Https prootocl differentiation
         rh = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
         if (rh == CURLUE_OK) {
             foundVals->scheme = (std::string)(scheme);
         } else {
-            fprintf(stderr, "error getting scheme");
+            foundVals->scheme = "No explicit scheme found";
         }
-            */
-        std::cout<<"I WAS RUN"<<std::endl;
-        return std::make_unique<param>();
-        } 
+        return foundVals;
+    } 
 };
 
 class runConcurrently {
     public:
     runConcurrently(std::vector<std::string> URLs) : shutdownFlag(false) {
         ssize_t amountCPUs = std::max(1u, std::thread::hardware_concurrency()-1);
-        //Current thread:
-        std::cout<<"This is the main thread ID: "<<std::this_thread::get_id()<<std::endl;
+        
         for (int i=0; i<amountCPUs; ++i) {
             threadPool.emplace_back([this]() {
                 try {
-                    std::cout << "Thread " << std::this_thread::get_id() << " has been spawned and will sleep now" << std::endl;
                     
                     while (true) {
                         std::function<std::unique_ptr<param>()> task; {
-                        std::ostringstream oss;
 
                         std::unique_lock<std::mutex>lock(taskLock);
-                        std::cout<<"thread "<<std::this_thread::get_id()<<" has been spawned and will sleep now"<<std::endl;
                         cv.wait(lock, [this]() { 
                             return !taskQueue.empty() || shutdownFlag; 
                         });
-                        //Printing out first "locked" piece
-                        oss <<"thread "<<std::this_thread::get_id()<<"Has entered the locked segment";
-                        std::string toAddOne = oss.str(); 
-                        std::cout<<toAddOne<<std::endl;
+                        
                         if (shutdownFlag && taskQueue.empty()) {
                             return;
                         }
-                        oss.clear();
-                        //printing out second "locked" piece
-                        oss <<"Taking task out in thread: "<<std::this_thread::get_id;
-                        std::string toAddTwo = oss.str();
-                        std::cout<<toAddTwo<<std::endl;
+                       
                                     
                         if (taskQueue.empty() == false) {
                             task = std::move(taskQueue.front());
@@ -117,20 +102,11 @@ class runConcurrently {
                         } else {
                             std::cout<<"Empty taskQueue"<<std::endl;
                         }
-                                    
-                        oss.clear();
-                        //Printing out third "locked" piece
-                        oss <<"unlocking thread: "<<std::this_thread::get_id();
-                        std::string toAddThree = oss.str();
-                        std::cout<<toAddThree<<std::endl;
                         }
-                        // Outside the lock scope, execute task
                         std::unique_ptr<param> val;
                         if (task) {
                             try {
-                                std::cout << "Running task from thread" << std::this_thread::get_id() << "now..." << std::endl;
                                 val = task();
-                                std::cout << "Task completed in " << std::this_thread::get_id() << std::endl;
                             } catch (const std::exception& e) {
                                 std::cerr << "Exception in task execution: " << e.what() << std::endl;
                             } catch (...) {
@@ -141,7 +117,6 @@ class runConcurrently {
                         }
                         {
                         std::unique_lock<std::mutex>writeGuard(writeLock); 
-                        std::cout<<std::this_thread::get_id()<<" is now writing to matrix now"<<std::endl;
                         matrix.emplace_back(std::move(val));
                         }
                     }
@@ -153,7 +128,6 @@ class runConcurrently {
             });
         } 
         usleep(5000);
-        std::cout<<std::this_thread::get_id()<<" threas is now adding processes in"<<std::endl;
         for (std::string& URL : URLs) {
             auto toAdd = std::make_shared<findSiteInfo>(URL);
             {
@@ -164,7 +138,6 @@ class runConcurrently {
                             std::cerr << "ERROR: Null pointer in lambda" << std::endl;
                             return nullptr;
                         }
-                        std::cout << std::this_thread::get_id() << " added the URL" << std::endl;
                         return s->getInfo();
                     } catch (const std::exception& e) {
                         std::cerr << "Exception in lambda: " << e.what() << std::endl;
@@ -174,13 +147,10 @@ class runConcurrently {
                         return nullptr;
                     }
                 });
-                cv.notify_one(); // Notify only one waiting thread
+                cv.notify_one(); 
             }
         }
-        std::cout<<"WILL START RUNNING THE PROCESSES NOW. This is the size of the taskQueue "<<taskQueue.size()<<std::endl;
-        std::cout<<"this the size of the threadPool "<<threadPool.size()<<std::endl;
         cv.notify_all();
-        std::cout<<std::this_thread::get_id()<<" thread is now waiting for other values to finish"<<std::endl;
     } 
     void shutdown() {
         {
@@ -188,13 +158,14 @@ class runConcurrently {
             shutdownFlag = true;
         }
         cv.notify_all();
-        
-        // Join all threads
         for (auto& thread : threadPool) {
             if (thread.joinable()) {
                 thread.join();
             }
         }
+    }
+    std::vector<std::unique_ptr<param>> returnResults() {
+        return std::move(matrix);
     }
 
     private:
@@ -233,5 +204,10 @@ int main(int argc, char* argv[]) {
     }
     auto Info = std::make_unique<runConcurrently>(URLs);
     Info->shutdown();
+    std::vector<std::unique_ptr<param>> matrix = Info->returnResults();
+    for (auto& val: matrix) {
+        std::cout<<val->path<<" This is the host here"<<std::endl;
+    }
+
     return 0;
 }

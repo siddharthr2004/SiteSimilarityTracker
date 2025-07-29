@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <unistd.h> 
 #include <curl/curl.h>
+#include <curl/urlapi.h> 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <memory>
@@ -18,9 +19,56 @@
 
 class findSiteInfo {
     public: 
-    std::string URL;
-
     findSiteInfo(std::string inputURL) : URL(inputURL) {}
+
+    std::unique_ptr<param::URLInfo> getURLInfo(CURLUcode rh, CURLU *h) {
+        char *curlHost = nullptr;
+        char *path = nullptr;
+        char *port = nullptr;
+        char *query = nullptr;
+        char *scheme = nullptr;
+        
+        auto URLInfo = std::make_unique<param::URLInfo>();
+        
+        rh = curl_url_get(h, CURLUPART_HOST, &curlHost, 0);
+        
+        if (rh == CURLUE_OK) {
+            URLInfo->host = (std::string)(curlHost);
+        } else {
+            URLInfo->host = "No explicit host found";
+        }
+        rh = curl_url_get(h, CURLUPART_PATH, &path, 0);
+        if (rh == CURLUE_OK) {
+            URLInfo->path = (std::string)(path);
+        } else {
+            URLInfo->path = "No explicit path found";
+        }
+        
+        rh = curl_url_get(h, CURLUPART_PORT, &port, 0);
+        if (rh == CURLUE_OK) {
+            URLInfo->port = (std::string)(port);
+        } else {
+            URLInfo->port = "No explicit port found";
+        }
+        //parameters which are queried/int
+        rh = curl_url_get(h, CURLUPART_QUERY, &query, 0);
+        if (rh == CURLUE_OK) {
+            URLInfo->query = (std::string)(query);
+        } else {
+            URLInfo->query = "No explicit query found";
+        }
+        //Http vs Https prootocl differentiation
+        rh = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
+        if (rh == CURLUE_OK) {
+            URLInfo->scheme = (std::string)(scheme);
+        } else {
+            URLInfo->scheme = "No explicit scheme found";
+        }
+        return URLInfo;
+    }
+    std::unique_ptr<param::fingerPrintInfo> getFinerPrintInfo(CURLUcode rh, CURLU *h) {
+
+    }
 
     std::unique_ptr<param> getInfo(void) {
         CURLU *h = curl_url();
@@ -28,50 +76,14 @@ class findSiteInfo {
         if (rh != CURLUE_OK) {
             fprintf(stderr, "Error setting URL\n");
         }
-        char *curlHost = nullptr;
-        char *path = nullptr;
-        char *port = nullptr;
-        char *query = nullptr;
-        char *scheme = nullptr;
-        
-        std::unique_ptr<param> foundVals = std::make_unique<param>();
-        
-        rh = curl_url_get(h, CURLUPART_HOST, &curlHost, 0);
-        
-        if (rh == CURLUE_OK) {
-            foundVals->host = (std::string)(curlHost);
-        } else {
-            foundVals->host = "No explicit host found";
-        }
-        rh = curl_url_get(h, CURLUPART_PATH, &path, 0);
-        if (rh == CURLUE_OK) {
-            foundVals->path = (std::string)(path);
-        } else {
-            foundVals->path = "No explicit path found";
-        }
-        
-        rh = curl_url_get(h, CURLUPART_PORT, &port, 0);
-        if (rh == CURLUE_OK) {
-            foundVals->port = (std::string)(port);
-        } else {
-            foundVals->port = "No explicit port found";
-        }
-        //parameters which are queried/int
-        rh = curl_url_get(h, CURLUPART_QUERY, &query, 0);
-        if (rh == CURLUE_OK) {
-            foundVals->query = (std::string)(query);
-        } else {
-            foundVals->query = "No explicit query found";
-        }
-        //Http vs Https prootocl differentiation
-        rh = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
-        if (rh == CURLUE_OK) {
-            foundVals->scheme = (std::string)(scheme);
-        } else {
-            foundVals->scheme = "No explicit scheme found";
-        }
+        auto foundVals = std::make_unique<param>();
+        foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
+        foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
         return foundVals;
     } 
+    private:
+    std::string URL;
+
 };
 
 class runConcurrently {
@@ -205,9 +217,6 @@ int main(int argc, char* argv[]) {
     auto Info = std::make_unique<runConcurrently>(URLs);
     Info->shutdown();
     std::vector<std::unique_ptr<param>> matrix = Info->returnResults();
-    for (auto& val: matrix) {
-        std::cout<<val->path<<" This is the host here"<<std::endl;
-    }
 
     return 0;
 }

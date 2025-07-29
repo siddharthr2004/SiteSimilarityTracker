@@ -67,7 +67,16 @@ class findSiteInfo {
         return URLInfo;
     }
     std::unique_ptr<param::fingerPrintInfo> getFinerPrintInfo(CURLUcode rh, CURLU *h) {
-
+        //TODO:
+    }
+    std::unique_ptr<param::IDInfo> getIdInfo(CURLUcode rh, CURLU *h) {
+        //TODO:
+    }
+    std::unique_ptr<param::infrastructureInfo> getInfraInfo(CURLUcode rh, CURLU *h) {
+        //TODO:
+    }
+    std::unique_ptr<param::contentSignatureInfo> getContentSignature(CURLUcode rh, CURLU *h) {
+        //TODO:
     }
 
     std::unique_ptr<param> getInfo(void) {
@@ -79,6 +88,9 @@ class findSiteInfo {
         auto foundVals = std::make_unique<param>();
         foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
         foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
+        foundVals->IDInformation = std::move(this->getIdInfo(rh, h));
+        foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h));
+        foundVals->contentSignatureInformation = std::move(this->getContentSignature(rh, h));
         return foundVals;
     } 
     private:

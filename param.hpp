@@ -64,7 +64,15 @@ struct param {
             std::string cacheControl;
         };
         struct contentSignatureInfo {
-
+            //checks for legal ownership, checks if identitcal copywrite across diff brands
+            std::string copywrite;
+            //get dev team info from HTML comments
+            std::string htmlComments;
+            //find the design choices of the domain
+            std::string fontSources;
+            //find the dev stack choices, see identitcal libs when it comes to JS codes in implementatiopn
+            std::string jsLibs;
+            
         };
 
         //Instantiations of the different values within the struct

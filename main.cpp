@@ -16,6 +16,10 @@
 #include <condition_variable>
 #include "param.hpp" 
 #include <sstream> 
+#include <botan/x509cert.h>
+#include <botan/tls_client.h>
+#include <maxminddb.h>
+#include <gumbo.h> 
 
 class findSiteInfo {
     public: 
@@ -67,7 +71,7 @@ class findSiteInfo {
         return URLInfo;
     }
     std::unique_ptr<param::fingerPrintInfo> getFinerPrintInfo(CURLUcode rh, CURLU *h) {
-        //TODO:
+        
     }
     std::unique_ptr<param::IDInfo> getIdInfo(CURLUcode rh, CURLU *h) {
         //TODO:

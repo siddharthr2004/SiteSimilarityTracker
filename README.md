@@ -3,8 +3,7 @@ Using https libraries to track similarities between sites inputted
 
 ## **Features:**
 - Uses libCurl and OpenSSL to target TLS certificates, response headers, status codes server info, status codes and more
-- Adds information into a matrix storage 
-- (in progress) matrix will sort and group sites based on user inputted similarity checks
+- Data added into data structure which (in progress) will sort and group sites based on user inputted similarity checks (such as similar infrasturcture, certificates etc.)
 - Uses concurrency to optimize for speed 
 
 ##  **Key Files & Structure**  

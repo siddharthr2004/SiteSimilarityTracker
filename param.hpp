@@ -1,6 +1,12 @@
 #pragma once
 #include <string>
 
+//this is for memory management of the http struct
+struct memory {
+    size_t size;
+    char* response;
+};
+
 struct param {
         //Information which is pulled which was had to do with URL info 
         struct URLInfo{
@@ -25,6 +31,7 @@ struct param {
            std::string CerType;
         };
         //This gets information pertaining to tracking codes from third party sites, ad campaigns, and analytic info
+        //HTML parsing needed
         struct IDInfo {
             //tracks user behavior, where same ID means same google analytics account and same owner (orgs use consistent
             //GA accounts)
@@ -63,6 +70,7 @@ struct param {
             //shows caching policy, including freshness policy and caching infra plans
             std::string cacheControl;
         };
+        //HTML parsing needed
         struct contentSignatureInfo {
             //checks for legal ownership, checks if identitcal copywrite across diff brands
             std::string copywrite;

@@ -25,6 +25,29 @@ class findSiteInfo {
     public: 
     findSiteInfo(std::string inputURL) : URL(inputURL) {}
 
+    bool openFile() {
+        htmlFile = fopen("htmlOutput.txt", "wb");
+        if (!htmlFile) {
+            return false;
+        }
+        return true;
+    }
+     // Write callback function for CURL
+    size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userData) {
+        size_t realSize = size * nmemb;
+        
+        
+    }
+
+    //Method used to parse through the html document
+    std::string parseDocumentation () {
+        CURL *curl = curl_easy_init();
+        if (!curl) {
+            std::cerr<<"Unable to instantiate the curl url handle"<<std::endl;
+        }
+        
+    }
+
     std::unique_ptr<param::URLInfo> getURLInfo(CURLUcode rh, CURLU *h) {
         char *curlHost = nullptr;
         char *path = nullptr;
@@ -86,6 +109,9 @@ class findSiteInfo {
     std::unique_ptr<param> getInfo(void) {
         CURLU *h = curl_url();
         CURLUcode rh = curl_url_set(h, CURLUPART_URL, URL.c_str(), 0);
+        if (!openFile()) {
+            std::cerr<<"Error instantiating the output html file"<<std::endl;
+        }
         if (rh != CURLUE_OK) {
             fprintf(stderr, "Error setting URL\n");
         }
@@ -99,6 +125,7 @@ class findSiteInfo {
     } 
     private:
     std::string URL;
+    FILE* htmlFile;
 
 };
 

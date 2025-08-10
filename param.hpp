@@ -31,19 +31,17 @@ struct param {
            std::string CerType;
         };
         //This gets information pertaining to tracking codes from third party sites, ad campaigns, and analytic info
-        //HTML parsing needed
+        //HTML parsing needede
         struct IDInfo {
             //tracks user behavior, where same ID means same google analytics account and same owner (orgs use consistent
-            //GA accounts)
+            //GA accounts). Will also default to universal analytics in the case that google analytics fails
             std::string googleAnalytics;
             //Tracks conversion from fb ads, find retarget audience. Same pixel id means same fb ad account
-            std::string facebookPiexl;
+            std::string facebookPixel;
             //GTM  manages tracking codes, same GTM means managed by same team. 
             std::string googleTagManager;
             //business tag management, expensive enterprise means strong organization (fitness of company)
             std::string tealium;
-            //tracks visitors for google ad, directly tied to billing org structure
-            std::string googleAdRemarketing;
             //Same UET tag means same microsoft ad account
             std::string microsoftAdUET;
         };

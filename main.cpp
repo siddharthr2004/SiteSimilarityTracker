@@ -20,6 +20,7 @@
 #include <botan/tls_client.h>
 #include <maxminddb.h>
 #include <gumbo.h> 
+#include <regex>
 
 class findSiteInfo {
     public: 
@@ -35,17 +36,88 @@ class findSiteInfo {
      // Write callback function for CURL
     size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userData) {
         size_t realSize = size * nmemb;
-        
-        
+        std::string *html = static_cast<std::string*>(userData);
+        html->append(ptr, realSize);
+        return realSize;
     }
 
     //Method used to parse through the html document
     std::string parseDocumentation () {
+        std::string htmlContent;
         CURL *curl = curl_easy_init();
         if (!curl) {
             std::cerr<<"Unable to instantiate the curl url handle"<<std::endl;
+        } 
+        curl_easy_setopt(curl, CURLOPT_URL, URL);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &htmlContent);
+        CURLcode result = curl_easy_perform(curl);
+        if (result != CURLE_OK) {
+            std::cerr<<"error pulling data from html file"<<std::endl;
         }
-        
+        return htmlContent;
+    }
+
+    std::string getContext(GumboNode* root) {
+        if (root->type == GUMBO_NODE_TEXT) {
+            return std::string(root->v.text.text);
+        }
+    }
+
+    void extractHTMLData(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature, GumboNode *root) {
+        if (root == nullptr) {
+            return;
+        }
+        if (root->type != GUMBO_NODE_ELEMENT) {
+            return;
+        }
+        //go into checking script vals, googleAnalytics, FBPixel, gglTagMngr, tealium, ggladremrkting, 
+        //mcsftAduet and jsLibs are all here
+        if (root->v.element.tag == GUMBO_TAG_SCRIPT) {
+            std::string data = getContext(root);
+            //regex patterns for google analytics:
+            std::regex googlePattern("G- [A-Z0-9]{6,}");
+            std::regex universalPattern("UA-\\d+-\\d+");
+            std::smatch match;
+            if (std::regex_search(data, match, googlePattern)) {
+                idInfo->googleAnalytics = match.str();
+            } else if (std::regex_search(data, match, universalPattern)) {
+                idInfo->googleAnalytics = match.str();
+            } else {
+                idInfo->googleAnalytics = "No match found";
+            }
+            //regex patterns for facebook analytics
+            std::regex facebookPattern("fbq\\(['\"]init['\"],\\s*['\"]([0-9]{15,16})['\"]");
+            if (std::regex_search(data, match, facebookPattern)) {
+                idInfo->facebookPixel = match.str();
+            } else {
+                idInfo->facebookPixel = "No match found";
+            }
+            //google tag manager analytics 
+            std::regex googleTagManager("GTM-([A-Z0-9]{7})");
+            if (std::regex_search(data, match, googleTagManager)) {
+                idInfo->googleTagManager = match.str();
+            } else {
+                idInfo->googleTagManager = "no match found";
+            }
+            //tealium analytics
+            std::regex tealium("tags\\.tiqcdn\\.com/utag/([^/]+)/[^/]+/[^/]+");
+            if (std::regex_search(data, match, tealium)) {
+                idInfo->tealium = match[1].str();
+            } else {
+                idInfo->tealium = "no match found";
+            }
+            std::regex microsoftAd("ti:\\s*([A-Z0-9]+)");
+            if (std::regex_search(data, match, microsoftAd)) {
+                idInfo->microsoftAdUET = match[1].str();
+            } else {
+                idInfo->microsoftAdUET = "no match found";
+            }
+        }
+        GumboVector* children = &root->v.element.children;
+        for (int i=0; i<children->length; ++i) {
+            GumboNode* child = (GumboNode*) children->data[i];
+        }
     }
 
     std::unique_ptr<param::URLInfo> getURLInfo(CURLUcode rh, CURLU *h) {
@@ -96,8 +168,12 @@ class findSiteInfo {
     std::unique_ptr<param::fingerPrintInfo> getFinerPrintInfo(CURLUcode rh, CURLU *h) {
         
     }
-    std::unique_ptr<param::IDInfo> getIdInfo(CURLUcode rh, CURLU *h) {
-        //TODO:
+    void getHTMLInfo(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature) {
+        std::string html = parseDocumentation();
+        GumboOutput* output = gumbo_parse(html.c_str());
+        GumboNode* root = output->root;
+        extractHTMLData(idInfo, contentSignature, root);
+
     }
     std::unique_ptr<param::infrastructureInfo> getInfraInfo(CURLUcode rh, CURLU *h) {
         //TODO:
@@ -115,12 +191,17 @@ class findSiteInfo {
         if (rh != CURLUE_OK) {
             fprintf(stderr, "Error setting URL\n");
         }
+        //create the pointers for the structs which need html parsing
+        auto IdInfo = std::make_unique<param::IDInfo>();
+        auto contentSignatureInfo = std::make_unique<param::contentSignatureInfo>();
+        getHTMLInfo(IdInfo, contentSignatureInfo);
+        //create the main params struct and move the rest of the values in
         auto foundVals = std::make_unique<param>();
         foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
         foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
-        foundVals->IDInformation = std::move(this->getIdInfo(rh, h));
+        foundVals->IDInformation = std::move(IdInfo);
         foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h));
-        foundVals->contentSignatureInformation = std::move(this->getContentSignature(rh, h));
+        foundVals->contentSignatureInformation = std::move(contentSignatureInfo);
         return foundVals;
     } 
     private:

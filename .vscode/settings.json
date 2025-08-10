@@ -69,7 +69,10 @@
         "vector": "cpp",
         "queue": "cpp",
         "condition_variable": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "__tree": "cpp",
+        "map": "cpp",
+        "regex": "cpp"
     }, 
      "C_Cpp.default.includePath": [
       "${default}",

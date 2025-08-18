@@ -1,3 +1,6 @@
 *.vscode/
 *executable.dSYM/
 *check.txt
+*check1.txt
+*output.txt
+*output1.txt

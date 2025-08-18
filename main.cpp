@@ -4,7 +4,7 @@
 #include <vector>
 #include <ostream>
 #include <cstdlib>
-#include <unistd.h> 
+#include <unistd.h>
 #include <curl/curl.h>
 #include <curl/urlapi.h> 
 #include <openssl/ssl.h>
@@ -66,10 +66,12 @@ class findSiteInfo {
 
     void extractHTMLData(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature, GumboNode *root) {
         if (root == nullptr) {
+            //test
+            std::cout<<"root pointer: "<<root<<"root type: "<<
+            root->type<<"root parent: "<<root->parent<<" indexed value within parent: "<<
+            root->index_within_parent<<" root is null, now returning to parent"<<std::endl;
             return;
         }
-        //test
-        std::cout << "root pointer: " << root << std::endl;
         //only extract information pertaining to the textual portion of the nodes if it is a 
         //gumbo_node_text
         if (root->type == GUMBO_NODE_TEXT || root->type == GUMBO_NODE_COMMENT) {
@@ -148,24 +150,36 @@ class findSiteInfo {
             } else {
                 contentSignature->htmlComments = "No match found";
             }
+            //test
+            std::cout<<"root pointer: "<<root<<" root type: "<<
+            root->type<<" root parent: "<<root->parent<<" indexed value in parent: "<<
+            root->index_within_parent<<" Match has been found and will now return back"<<std::endl;
             return;
         } 
         else if (root->type == GUMBO_NODE_ELEMENT) {
             GumboVector* children = &root->v.element.children;
             if (children->length == 0) {
                 //test
-                std::cout<<"Length of children here is 0 and will return"<<std::endl;
+                std::cout<<"root pointer: "<<root<<" root type: "<<
+                root->type<<" root parent: "<<root->parent<<" indexed value in parent: "<<
+                root->index_within_parent<<" No children, returning to parent"<<std::endl;
                 return;
             } else {
                 for (int i=0; i<children->length; ++i) {
-                    std::cout<<"Length of children here is "<<children->length<<std::endl;
                     GumboNode* child = (GumboNode*) children->data[i];
-                    std::cout<<i<<"th child aded in from parent node out of "<<children->length<<" children"<<std::endl;
+                    //test
+                    std::cout<<"root pointer: "<<root<<" root type: "<<
+                    root->type<<" root parent: "<<root->parent<<" indexed value within parent: "<<
+                    root->index_within_parent<<" Will now add child: "<<i<<" in, children amount: "<<root->v.element.children.length<<std::endl;
                     extractHTMLData(idInfo, contentSignature, child);
+                    //return;
                 }
             }
         } else {
-            std::cout<<"Error assigning what gumbo node is, moving onto next value..."<<std::endl;
+            //test
+            std::cout<<"root pointer: "<<root<<" root type: "<<
+            root->type<<" root parent: "<<root->parent<<" indexed value within parent: "<<
+            root->index_within_parent<<" Error assinging the gumbo node, will return"<<std::endl;
             return;
         }
     }
@@ -223,7 +237,6 @@ class findSiteInfo {
         std::ifstream file("check1.txt");
         std::stringstream html_stream;
         html_stream << file.rdbuf();
-        std::cout<<html_stream<<std::endl;
         std::string html = html_stream.str();
         std::cout<<"This is the entire html file"<<html<<std::endl;
         //below is commented out for testing
@@ -255,13 +268,15 @@ class findSiteInfo {
         auto IdInfo = std::make_unique<param::IDInfo>();
         auto contentSignatureInfo = std::make_unique<param::contentSignatureInfo>();
         getHTMLInfo(IdInfo, contentSignatureInfo);
-        //create the main params struct and move the rest of the values in
+        //test
         auto foundVals = std::make_unique<param>();
         foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
-        foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
-        foundVals->IDInformation = std::move(IdInfo);
-        foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h));
         foundVals->contentSignatureInformation = std::move(contentSignatureInfo);
+        foundVals->IDInformation = std::move(IdInfo);
+        //commented out until full implementation put in
+        //foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
+        //foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h));
+        
         return foundVals;
     } 
     private:

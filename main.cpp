@@ -22,6 +22,103 @@
 #include <gumbo.h> 
 #include <regex>
 
+//class for sorting the info which is pulled from each of the sites
+class sortInfo {
+    public:
+    sortInfo(std::vector<std::unique_ptr<param>> inputMap) : inputVector(std::move(inputMap)) {}
+
+    void populateMap(void) {
+        for (const auto& val : inputVector) {
+            //first for URLInfo
+            if (!val->URLInformation->host.empty() && val->URLInformation->host != "No match found") {
+                mainMap["host"][val->URLInformation->host].push_back(val->URL);
+            }
+            if (!val->URLInformation->path.empty() && val->URLInformation->path != "No match found") {
+                mainMap["path"][val->URLInformation->path].push_back(val->URL);
+            }
+            if (!val->URLInformation->port.empty() && val->URLInformation->port != "No match found") {
+                mainMap["port"][val->URLInformation->port].push_back(val->URL);
+            }
+            if (!val->URLInformation->query.empty() && val->URLInformation->query != "No match found") {
+                mainMap["query"][val->URLInformation->query].push_back(val->URL);
+            }
+            if (!val->URLInformation->scheme.empty() && val->URLInformation->scheme != "No match found") {
+                mainMap["scheme"][val->URLInformation->scheme].push_back(val->URL);
+            }
+            //now fingerPrintInfo
+            if (!val->fingerInformation->CerSAN.empty() && val->fingerInformation->CerSAN != "No match found") {
+                mainMap["CerSAN"][val->fingerInformation->CerSAN].push_back(val->URL);
+            } 
+            if (!val->fingerInformation->CerorganizationName.empty() && val->fingerInformation->CerorganizationName != "No match found") {
+                mainMap["CerorganizationName"][val->fingerInformation->CerorganizationName].push_back(val->URL);
+            } 
+            if (!val->fingerInformation->CercommonName.empty() && val->fingerInformation->CercommonName != "No match found") {
+                mainMap["CercommonName"][val->fingerInformation->CercommonName].push_back(val->URL);
+            }
+            if (!val->fingerInformation->CercertificateAuthoritySite.empty() && val->fingerInformation->CercertificateAuthoritySite != "No match found") {
+                mainMap["CercertificateAuthoritySite"][val->fingerInformation->CercertificateAuthoritySite].push_back(val->URL);
+            }
+            if (!val->fingerInformation->CervalidityPeriod.empty() && val->fingerInformation->CervalidityPeriod != "No match found") {
+                mainMap["CervalidityPeriod"][val->fingerInformation->CervalidityPeriod].push_back(val->URL);
+            }
+            if (!val->fingerInformation->CerType.empty() && val->fingerInformation->CerType != "No match found") {
+                mainMap["CerType"][val->fingerInformation->CerType].push_back(val->URL);
+            }
+            //Now infrstructure info
+            if (!val->infrasturcutreInformation->serverHeader.empty() && val->infrasturcutreInformation->serverHeader != "No match found") {
+                mainMap["serverHeader"][val->infrasturcutreInformation->serverHeader].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->xPower.empty() && val->infrasturcutreInformation->xPower != "No match found") {
+                mainMap["xPower"][val->infrasturcutreInformation->xPower].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->CFRayHead.empty() && val->infrasturcutreInformation->CFRayHead != "No match found") {
+                mainMap["CFRayHead"][val->infrasturcutreInformation->CFRayHead].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->xServedByHeader.empty() && val->infrasturcutreInformation->xServedByHeader != "No match found") {
+                mainMap["xServedByHeader"][val->infrasturcutreInformation->xServedByHeader].push_back(val->URL);
+            }
+            if (!val->infrasturcutreInformation->IpAddress.empty() && val->infrasturcutreInformation->IpAddress != "No match found") {
+                mainMap["IpAddress"][val->infrasturcutreInformation->IpAddress].push_back(val->URL);
+            }  
+            if (!val->infrasturcutreInformation->ASN.empty() && val->infrasturcutreInformation->ASN != "No match found") {
+                mainMap["ASN"][val->infrasturcutreInformation->ASN].push_back(val->URL);
+            }  
+            if (!val->infrasturcutreInformation->ISP.empty() && val->infrasturcutreInformation->ISP != "No match found") {
+                mainMap["ISP"][val->infrasturcutreInformation->ISP].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->CDN.empty() && val->infrasturcutreInformation->CDN != "No match found") {
+                mainMap["CDN"][val->infrasturcutreInformation->CDN].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->HTTPVersionl.empty() && val->infrasturcutreInformation->HTTPVersionl != "No match found") {
+                mainMap["HTTPVersionl"][val->infrasturcutreInformation->HTTPVersionl].push_back(val->URL);
+            }  
+            if (!val->infrasturcutreInformation->supportedMethods.empty() && val->infrasturcutreInformation->supportedMethods != "No match found") {
+                mainMap["supportedMethods"][val->infrasturcutreInformation->supportedMethods].push_back(val->URL);
+            } 
+            if (!val->infrasturcutreInformation->cacheControl.empty() && val->infrasturcutreInformation->cacheControl != "No match found") {
+                mainMap["cacheControl"][val->infrasturcutreInformation->cacheControl].push_back(val->URL);
+            } 
+            //now contentSignatureInfo
+            if (!val->contentSignatureInformation->copywrite.empty() && val->contentSignatureInformation->copywrite != "No match found") {
+                mainMap["copywrite"][val->contentSignatureInformation->copywrite].push_back(val->URL);
+            } 
+            if (!val->contentSignatureInformation->htmlComments.empty() && val->contentSignatureInformation->htmlComments != "No match found") {
+                mainMap["htmlComments"][val->contentSignatureInformation->htmlComments].push_back(val->URL);
+            } 
+            if (!val->contentSignatureInformation->fontSources.empty() && val->contentSignatureInformation->fontSources != "No match found") {
+                mainMap["fontSources"][val->contentSignatureInformation->fontSources].push_back(val->URL);
+            }
+            if (!val->contentSignatureInformation->jsLibs.empty() && val->contentSignatureInformation->jsLibs != "No match found") {
+                mainMap["jsLibs"][val->contentSignatureInformation->jsLibs].push_back(val->URL);
+            }
+        }
+    }
+
+    private:
+    std::map<std::string, std::map<std::string, std::vector<std::string>>> mainMap;
+    std::vector<std::unique_ptr<param>> inputVector;
+};
+
 class findSiteInfo {
     public: 
     findSiteInfo(std::string inputURL) : URL(inputURL) {}
@@ -133,11 +230,11 @@ class findSiteInfo {
             }
         
             //checking copywrite info all portions of the div
-            std::regex copywright("(?:©|\bCopyright\b)\\s*(\\d{4})(?:-(\\d{4}))?\\s*(.*?)$");
+            std::regex copywright("(?:©|Copyright)\\s*(\\d{4})(?:-(\\d{4}))?\\s*(.*?)");
             if (std::regex_search(data, match, copywright)) {
                 //test
-                std::cout<<"copywright check"<<match.str()<<std::endl;
-                contentSignature->copywrite = match[3].str();
+                std::cout<<"value to add: "<<match[3].str()<<std::endl;
+                contentSignature->copywrite = match[4].str();
             } else {
                 contentSignature->copywrite = "no match found";
             }
@@ -273,10 +370,10 @@ class findSiteInfo {
         foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
         foundVals->contentSignatureInformation = std::move(contentSignatureInfo);
         foundVals->IDInformation = std::move(IdInfo);
+        foundVals->URL = URL;
         //commented out until full implementation put in
         //foundVals->fingerInformation = std::move(this->getFinerPrintInfo(rh, h));
-        //foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h));
-        
+        //foundVals->infrasturcutreInformation = std::move(this->getInfraInfo(rh, h))
         return foundVals;
     } 
     private:
@@ -417,6 +514,7 @@ int main(int argc, char* argv[]) {
     auto Info = std::make_unique<runConcurrently>(URLs);
     Info->shutdown();
     std::vector<std::unique_ptr<param>> matrix = Info->returnResults();
+
 
     return 0;
 }

@@ -87,4 +87,6 @@ struct param {
         std::unique_ptr<IDInfo> IDInformation = std::make_unique<IDInfo>();
         std::unique_ptr<infrastructureInfo> infrasturcutreInformation = std::make_unique<infrastructureInfo>();
         std::unique_ptr<contentSignatureInfo> contentSignatureInformation = std::make_unique<contentSignatureInfo>();
+        //URL of the struct:
+        std::string URL;
     };

@@ -238,47 +238,31 @@ class findSiteInfo {
     }
 
     std::unique_ptr<param::URLInfo> getURLInfo(CURLUcode rh, CURLU *h) {
-        char *curlHost = nullptr;
-        char *path = nullptr;
-        char *port = nullptr;
-        char *query = nullptr;
-        char *scheme = nullptr;
-        
+        //struct to return
         auto URLInfo = std::make_unique<param::URLInfo>();
-        
-        rh = curl_url_get(h, CURLUPART_HOST, &curlHost, 0);
-        
-        if (rh == CURLUE_OK) {
-            URLInfo->host = (std::string)(curlHost);
-        } else {
-            URLInfo->host = "No explicit host found";
+        //five non-names pointers holding answer to return to dict
+        std::vector<char*> charPointers(5, nullptr);
+        //curlCommands 
+        std::vector<CURLUPart> curlCommands = {
+            CURLUPART_HOST, CURLUPART_PATH, CURLUPART_PORT, CURLUPART_QUERY, CURLUPART_SCHEME
+        };
+        //struct vals as pointers
+        std::vector<std::string*> stringPointers = {
+            &URLInfo->host, &URLInfo->path, &URLInfo->port, &URLInfo->query, &URLInfo->scheme
+        };
+        //quit out if arrays are not same size
+        if (curlCommands.size() != stringPointers.size()) {
+            std::cerr<<"Irregular array shaping, quiting now"<<std::endl;
+            exit(1);
         }
-        rh = curl_url_get(h, CURLUPART_PATH, &path, 0);
-        if (rh == CURLUE_OK) {
-            URLInfo->path = (std::string)(path);
-        } else {
-            URLInfo->path = "No explicit path found";
-        }
-        
-        rh = curl_url_get(h, CURLUPART_PORT, &port, 0);
-        if (rh == CURLUE_OK) {
-            URLInfo->port = (std::string)(port);
-        } else {
-            URLInfo->port = "No explicit port found";
-        }
-        //parameters which are queried/int
-        rh = curl_url_get(h, CURLUPART_QUERY, &query, 0);
-        if (rh == CURLUE_OK) {
-            URLInfo->query = (std::string)(query);
-        } else {
-            URLInfo->query = "No explicit query found";
-        }
-        //Http vs Https prootocl differentiation
-        rh = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
-        if (rh == CURLUE_OK) {
-            URLInfo->scheme = (std::string)(scheme);
-        } else {
-            URLInfo->scheme = "No explicit scheme found";
+        //iterate through and do operatons on vals
+        for (int i=0; i<5; ++i) {
+            rh = curl_url_get(h, curlCommands[i], &charPointers[i], 0);
+            if (rh == CURLUE_OK) {
+                *(stringPointers[i]) = (std::string)(charPointers[i]);
+            } else {
+                *(stringPointers[i]) = "no explicit host found";
+            }
         }
         return URLInfo;
     }
@@ -312,10 +296,13 @@ class findSiteInfo {
         //create the pointers for the structs which need html parsing
         auto IdInfo = std::make_unique<param::IDInfo>();
         auto contentSignatureInfo = std::make_unique<param::contentSignatureInfo>();
-        getHTMLInfo(IdInfo, contentSignatureInfo);
+        //TEST: commented out
+        //getHTMLInfo(IdInfo, contentSignatureInfo);
         //test
         auto foundVals = std::make_unique<param>();
         foundVals->URLInformation = std::move(this->getURLInfo(rh, h));
+        //TEST
+        std::cout<<"finished retieving values"<<std::endl;
         foundVals->contentSignatureInformation = std::move(contentSignatureInfo);
         foundVals->IDInformation = std::move(IdInfo);
         foundVals->URL = URL;

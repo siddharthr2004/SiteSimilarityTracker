@@ -73,7 +73,13 @@
         "__tree": "cpp",
         "map": "cpp",
         "regex": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "__verbose_abort": "cpp",
+        "charconv": "cpp",
+        "execution": "cpp",
+        "forward_list": "cpp",
+        "print": "cpp",
+        "variant": "cpp"
     }, 
      "C_Cpp.default.includePath": [
       "${default}",

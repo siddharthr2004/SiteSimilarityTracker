@@ -131,7 +131,7 @@ class findSiteInfo {
         }
         return true;
     }
-     // Write callback function for CURL
+     // Write callback function for CURL, fed solely into parseDocumentation file 
     static size_t writeCallback(char *ptr, size_t size, size_t nmemb, void *userData) {
         size_t realSize = size * nmemb;
         std::string *html = static_cast<std::string*>(userData);
@@ -162,123 +162,77 @@ class findSiteInfo {
         }
     }
 
-    
-    void extractHTMLData(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature, GumboNode *root) {
+    //test value containing the number of recursive depth added in for clarity into argument. Remove when going into 
+    //main section 
+    void extractHTMLData(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature, GumboNode *root, int val) {
         if (root == nullptr) {
-            //test
-            std::cout<<"root pointer: "<<root<<"root type: "<<
-            root->type<<"root parent: "<<root->parent<<" indexed value within parent: "<<
-            root->index_within_parent<<" root is null, now returning to parent"<<std::endl;
             return;
         }
-        //only extract information pertaining to the textual portion of the nodes if it is a 
-        //gumbo_node_text
+        //Information extracted only if gumbo text or gumo comment
         if (root->type == GUMBO_NODE_TEXT || root->type == GUMBO_NODE_COMMENT) {
+            //get context for root
             std::string data = getContext(root);
             //the match you are to use and which you can reuse within each regex capture
             std::smatch match;
-            //test
-            std::cout<<"This is the text here: "<<data<<std::endl;
-            //go into checking script vals, googleAnalytics, FBPixel, gglTagMngr, tealium, ggladremrkting, 
-            //mcsftAduet and jsLibs are all here
-            //regex patterns for google analytics:
-            std::regex googlePattern("G- [A-Z0-9]{6,}");
-            std::regex universalPattern("UA-\\d+-\\d+");
-            if (std::regex_search(data, match, googlePattern)) {
-                //test
-                std::cout<<match.str()<<std::endl;
-                idInfo->googleAnalytics = match.str();
-            } else if (std::regex_search(data, match, universalPattern)) {
-                //test
-                std::cout<<"google pattern 1 match: "<<match.str()<<std::endl;
-                idInfo->googleAnalytics = match.str();
-            } else {
-                idInfo->googleAnalytics = "No match found";
-            }
-            //regex patterns for facebook analytics
-            std::regex facebookPattern("fbq\\(['\"]init['\"],\\s*['\"]([0-9]{15,16})['\"]");
-            if (std::regex_search(data, match, facebookPattern)) {
-                //test
-                std::cout<<"This is the facebookPattern check"<<match.str()<<std::endl;
-                idInfo->facebookPixel = match.str();
-            } else {
-                idInfo->facebookPixel = "No match found";
-            }
-            //google tag manager analytics 
-            std::regex googleTagManager("GTM-([A-Z0-9]{7})");
-            if (std::regex_search(data, match, googleTagManager)) {
-                //test
-                std::cout<<"Google tag manager"<<match.str()<<std::endl;
-                idInfo->googleTagManager = match.str();
-            } else {
-                idInfo->googleTagManager = "no match found";
+            //fields storing values to populate ID information
+            std::vector<std::string*> fieldsIdInfo {
+                &idInfo->googleAnalytics,
+                &idInfo->facebookPixel,
+                &idInfo->googleTagManager,
+                &idInfo->tealium,
+                &idInfo->microsoftAdUET,
+               
+            };
+            //fields storing content to populate content signatue information
+            std::vector<std::string*> fieldsContentSignature {
+                &contentSignature->copywrite,
+                &contentSignature->htmlComments
+            };
+            //capture match region, if -1 the entire area is captured
+            int captureRegion [7] = {-1, -1, -1, 1, 1, 3, 2};
+            //mapping out regex patterns
+            std::vector<std::regex> regexVals {
+                std::regex ("G- [A-Z0-9]{6,}|UA-\\d+-\\d+"), 
+                std::regex ("fbq\\(['\"]init['\"],\\s*['\"]([0-9]{15,16})['\"]"),
+                std::regex ("GTM-([A-Z0-9]{7})"),
+                std::regex ("tags\\.tiqcdn\\.com/utag/([^/]+)/[^/]+/[^/]+"),
+                std::regex ("ti:\\s*([A-Z0-9]+)"),
+                std::regex("(?:©|Copyright)\\s*(\\d{4})(?:-(\\d{4}))?\\s*(.+)"),
+                std::regex ("<!--\\s*(Developed by|Powered by|Team|Created by|Maintained by|Built by)\\s*(.*?)\\s*-->")
+            };
+            //iterat through each value, find their matching region if it exists
+            for (int i=0; i<7; ++i) {
+                if (std::regex_search(data, match, regexVals[i])) {
+                    if (i<5) {
+                        if (captureRegion[i] == -1) {
+                            *fieldsIdInfo[i] = match.str();
+                        } else {
+                            *fieldsIdInfo[i] = match[captureRegion[i]].str();
+                        }
+                    } else {
+                        if (captureRegion[i] == -1) {
+                            *fieldsContentSignature[i-5] = match.str();
+                        } else {
+                            *fieldsContentSignature[i-5] = match[captureRegion[i]].str();
+                        }
+                    }
                 }
-            //tealium analytics
-            std::regex tealium("tags\\.tiqcdn\\.com/utag/([^/]+)/[^/]+/[^/]+");
-            if (std::regex_search(data, match, tealium)) {
-                //test
-                std::cout<<"tealium check"<<match.str()<<std::endl;
-                idInfo->tealium = match[1].str();
-            } else {
-                idInfo->tealium = "no match found";
-            }
-            std::regex microsoftAd("ti:\\s*([A-Z0-9]+)");
-            if (std::regex_search(data, match, microsoftAd)) {
-                //test
-                std::cout<<"microsoft ad check"<<match.str()<<std::endl;
-                idInfo->microsoftAdUET = match[1].str();
-            } else {
-                idInfo->microsoftAdUET = "no match found";
-            }
-        
-            //checking copywrite info all portions of the div
-            std::regex copywright("(?:©|Copyright)\\s*(\\d{4})(?:-(\\d{4}))?\\s*(.*?)");
-            if (std::regex_search(data, match, copywright)) {
-                //test
-                std::cout<<"value to add: "<<match[3].str()<<std::endl;
-                contentSignature->copywrite = match[4].str();
-            } else {
-                contentSignature->copywrite = "no match found";
-            }
-            //find the team members within the match here
-            std::regex teamCommentPattern("<!--\\s*(Developed by|Powered by|Team|Created by|Maintained by|Built by)\\s*(.*?)\\s*-->");
-            if (std::regex_search(data, match, teamCommentPattern)) {
-                //test
-                std::cout<<"teamCommentPattern check: "<<match.str()<<std::endl;
-                contentSignature->htmlComments = match[2].str();
-            } else {
-                contentSignature->htmlComments = "No match found";
-            }
-            //test
-            std::cout<<"root pointer: "<<root<<" root type: "<<
-            root->type<<" root parent: "<<root->parent<<" indexed value in parent: "<<
-            root->index_within_parent<<" Match has been found and will now return back"<<std::endl;
+            } 
             return;
         } 
+        //if gumbo node element, continue recursing 
         else if (root->type == GUMBO_NODE_ELEMENT) {
             GumboVector* children = &root->v.element.children;
             if (children->length == 0) {
-                //test
-                std::cout<<"root pointer: "<<root<<" root type: "<<
-                root->type<<" root parent: "<<root->parent<<" indexed value in parent: "<<
-                root->index_within_parent<<" No children, returning to parent"<<std::endl;
                 return;
             } else {
                 for (int i=0; i<children->length; ++i) {
                     GumboNode* child = (GumboNode*) children->data[i];
-                    //test
-                    std::cout<<"root pointer: "<<root<<" root type: "<<
-                    root->type<<" root parent: "<<root->parent<<" indexed value within parent: "<<
-                    root->index_within_parent<<" Will now add child: "<<i<<" in, children amount: "<<root->v.element.children.length<<std::endl;
-                    extractHTMLData(idInfo, contentSignature, child);
-                    //return;
+                    extractHTMLData(idInfo, contentSignature, child, val+1);
                 }
             }
+        //or return back to prev stack call
         } else {
-            //test
-            std::cout<<"root pointer: "<<root<<" root type: "<<
-            root->type<<" root parent: "<<root->parent<<" indexed value within parent: "<<
-            root->index_within_parent<<" Error assinging the gumbo node, will return"<<std::endl;
             return;
         }
     }
@@ -331,15 +285,12 @@ class findSiteInfo {
     std::unique_ptr<param::fingerPrintInfo> getFinerPrintInfo(CURLUcode rh, CURLU *h) {
         
     }
+    //method created gumbo node and then parses through the DOM
     void getHTMLInfo(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature) {
-        //test for getting html:
         std::string htmlFile = parseDocumentation();
-        std::cout<<htmlFile<<std::endl;
-        //gumbo node created for DOM traversal 
         GumboOutput* output = gumbo_parse(htmlFile.c_str());
         GumboNode* root = output->root;
-        //extract html info
-        extractHTMLData(idInfo, contentSignature, root);
+        extractHTMLData(idInfo, contentSignature, root, 0);
 
     }
     std::unique_ptr<param::infrastructureInfo> getInfraInfo(CURLUcode rh, CURLU *h) {

@@ -22,7 +22,8 @@
 #include <gumbo.h> 
 #include <regex>
 
-//class for sorting the info which is pulled from each of the sites
+//class for sorting the info which is pulled from each of the sites. This portion is done AFTER pulling 
+//all information from before
 class sortInfo {
     public:
     sortInfo(std::vector<std::unique_ptr<param>> inputMap) : inputVector(std::move(inputMap)) {}
@@ -161,6 +162,7 @@ class findSiteInfo {
         }
     }
 
+    
     void extractHTMLData(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature, GumboNode *root) {
         if (root == nullptr) {
             //test
@@ -331,15 +333,10 @@ class findSiteInfo {
     }
     void getHTMLInfo(std::unique_ptr<param::IDInfo>& idInfo, std::unique_ptr<param::contentSignatureInfo>& contentSignature) {
         //test for getting html:
-        std::ifstream file("check1.txt");
-        std::stringstream html_stream;
-        html_stream << file.rdbuf();
-        std::string html = html_stream.str();
-        std::cout<<"This is the entire html file"<<html<<std::endl;
-        //below is commented out for testing
-        //std::string html = parseDocumentation();
-        //create gumbo node
-        GumboOutput* output = gumbo_parse(html.c_str());
+        std::string htmlFile = parseDocumentation();
+        std::cout<<htmlFile<<std::endl;
+        //gumbo node created for DOM traversal 
+        GumboOutput* output = gumbo_parse(htmlFile.c_str());
         GumboNode* root = output->root;
         //extract html info
         extractHTMLData(idInfo, contentSignature, root);
@@ -390,7 +387,6 @@ class runConcurrently {
         for (int i=0; i<amountCPUs; ++i) {
             threadPool.emplace_back([this]() {
                 try {
-                    
                     while (true) {
                         std::function<std::unique_ptr<param>()> task; {
 
@@ -403,7 +399,6 @@ class runConcurrently {
                             return;
                         }
                        
-                                    
                         if (taskQueue.empty() == false) {
                             task = std::move(taskQueue.front());
                             taskQueue.pop();

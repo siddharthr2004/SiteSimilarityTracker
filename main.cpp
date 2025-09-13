@@ -29,6 +29,54 @@ class sortInfo {
     sortInfo(std::vector<std::unique_ptr<param>> inputMap) : inputVector(std::move(inputMap)) {}
 
     void populateMap(void) {
+
+        size_t length = inputVector.size();
+        for (int i=0; i<length; ++i) {
+            //get URL val
+            std::string url = inputVector[i]->URL;
+            //packaging out URLInfo sub-struct
+            std::vector<std::string*> allVals = {
+                //packaging for URLInformation sub-struct
+                &inputVector[i]->URLInformation->host, &inputVector[i]->URLInformation->path, 
+                &inputVector[i]->URLInformation->port,&inputVector[i]->URLInformation->query, 
+                &inputVector[i]->URLInformation->scheme,
+                //packing out fingerPrintInfo sub-struct
+                &inputVector[i]->fingerInformation->CerSAN,
+                &inputVector[i]->fingerInformation->CerorganizationName, &inputVector[i]->fingerInformation->CercommonName,
+                &inputVector[i]->fingerInformation->CercertificateAuthoritySite, 
+                &inputVector[i]->fingerInformation->CervalidityPeriod,&inputVector[i]->fingerInformation->CerType,
+                //packging out IDInfo sub-struct
+                &inputVector[i]->IDInformation->googleAnalytics,
+                &inputVector[i]->IDInformation->facebookPixel, &inputVector[i]->IDInformation->googleTagManager,
+                &inputVector[i]->IDInformation->tealium, &inputVector[i]->IDInformation->microsoftAdUET, 
+                //packaging for infrastructureInfo sub-struct
+                &inputVector[i]->infrasturcutreInformation->serverHeader,
+                &inputVector[i]->infrasturcutreInformation->xPower, &inputVector[i]->infrasturcutreInformation->CFRayHead,
+                &inputVector[i]->infrasturcutreInformation->xServedByHeader, &inputVector[i]->infrasturcutreInformation->IpAddress,
+                &inputVector[i]->infrasturcutreInformation->ASN, &inputVector[i]->infrasturcutreInformation->ISP, 
+                &inputVector[i]->infrasturcutreInformation->CDN, &inputVector[i]->infrasturcutreInformation->HTTPVersionl,
+                &inputVector[i]->infrasturcutreInformation->supportedMethods, &inputVector[i]->infrasturcutreInformation->cacheControl,
+                //packaging for contentSignatureInformation sub-struct
+                &inputVector[i]->contentSignatureInformation->copywrite, 
+                &inputVector[i]->contentSignatureInformation->htmlComments, &inputVector[i]->contentSignatureInformation->fontSources,
+                &inputVector[i]->contentSignatureInformation->jsLibs,
+            };
+            std::vector<std::string> mainKeys = {
+                "host", "path", "port", "query", "scheme", "CerSAN", "CerorganizationName", "CercommonName", "CercertificateAuthoritySite",
+                "CervalidityPeriod", "CerType", "googleAnalytics", "facebookPixel", "googleTagManager", "tealium", "microsoftAdUET", 
+                "serverHeader", "xPower", "CFRayHead", "xServedByHeader", "IpAddress", "ASN", "ISP", "CDN", "HTTPVersionl", "supportedMethods",
+                "cacheControl", "copywrite", "htmlComments", "fontSources", "jsLibs", 
+            };
+            if (mainKeys.size() != allVals.size()) {
+                std::cerr<<"ERROR: AllVals and mainKeys are different sizes!"<<std::endl;
+            }
+            for (int i=0; i<mainKeys.size(); ++i) {
+
+            }
+        }
+
+            
+        
         for (const auto& val : inputVector) {
             //first for URLInfo
             if (!val->URLInformation->host.empty() && val->URLInformation->host != "No match found") {
@@ -116,7 +164,7 @@ class sortInfo {
     }
 
     private:
-    std::map<std::string, std::map<std::string, std::vector<std::string>>> mainMap;
+    std::map<std::string, std::vector<std::map<std::string, std::vector<std::string>>>> mainMap;
     std::vector<std::unique_ptr<param>> inputVector;
 };
 

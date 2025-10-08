@@ -21,6 +21,7 @@
 #include <maxminddb.h>
 #include <gumbo.h> 
 #include <regex>
+#include <chrono>
 
 //class for sorting the info which is pulled from each of the sites. This portion is done AFTER pulling 
 //all information from before
